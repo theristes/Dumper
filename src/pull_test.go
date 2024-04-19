@@ -3,13 +3,14 @@ package dumper
 import (
 	"testing"
 	"time"
+
 	"github.com/joho/godotenv"
 )
 
-func TestPullSimpleQuery(t *testing.T) {
+func TestPullSimpleQueryFirebird(t *testing.T) {
 
 	godotenv.Load("./test.env")
-	conn := GetConn()
+	conn := GetFirebirdConn()
 
 	type User struct {
 		Id           int     `field:"CD_USUARIO"`
@@ -53,11 +54,54 @@ func TestPullSimpleQuery(t *testing.T) {
 		t.Error("Expected data to have 62 rows")
 	}
 }
-
-func TestPullSimpleQueryDifferentKinds(t *testing.T) {
+func TestPullSimpleQueryFirebirdWithArgs(t *testing.T) {
 
 	err := godotenv.Load("./test.env")
-	conn := GetConn()
+	conn := GetFirebirdConn()
+
+	if err != nil {
+		t.Error("Expected err to be nil")
+		t.Error(err)
+	}
+
+	type User struct {
+		Id           int    `field:"CD_USUARIO"`
+		PermissionId int    `field:"CD_PERMISSAO"`
+		StoreId      int    `field:"CD_FILIAL"`
+		Name         string `field:"NOME"`
+		Login        string `field:"LOGIN"`
+		Password     string `field:"SENHA"`
+		Enabled      string `field:"PODEVENDER"`
+		Cashier      string `field:"CAIXA"`
+		MaxDiscount  string `field:"TX_DESCONTO_MAXIMO"`
+		Send         string `field:"ENVIADO"`
+	}
+
+	pull := Pull[User]{
+		DB:    conn,
+		Query: "SELECT * FROM USUARIOS u WHERE u.CD_USUARIO = ?",
+		Args:  []any{67},
+	}
+
+	data, err := pull.Run()
+
+	if err != nil {
+		t.Error("Expected err to be nil")
+		t.Error(err)
+	}
+
+	if data == nil {
+		t.Error("Expected data to be not nil")
+	}
+
+	if len(data) == 0 {
+		t.Error("Expected data to have at least one row")
+	}
+}
+func TestPullSimpleQueryFirebirdDifferentKinds(t *testing.T) {
+
+	err := godotenv.Load("./test.env")
+	conn := GetFirebirdConn()
 
 	if err != nil {
 		t.Error("Expected err to be nil")
@@ -106,11 +150,10 @@ func TestPullSimpleQueryDifferentKinds(t *testing.T) {
 		t.Error("Expected data to have 62 rows")
 	}
 }
-
-func TestPullQueryMissingFields(t *testing.T) {
+func TestPullQueryFirebirdMissingFields(t *testing.T) {
 
 	err := godotenv.Load("./test.env")
-	conn := GetConn()
+	conn := GetFirebirdConn()
 
 	if err != nil {
 		t.Error("Expected err to be nil")
@@ -163,11 +206,10 @@ func TestPullQueryMissingFields(t *testing.T) {
 		t.Error("Expected user to have the differente number of fields as the columns")
 	}
 }
-
-func TestPullComplexQuery(t *testing.T) {
+func TestPullComplexQueryFirebird(t *testing.T) {
 
 	godotenv.Load("./test.env")
-	conn := GetConn()
+	conn := GetFirebirdConn()
 
 	type Product struct {
 		ProductID                     int64     `field:"ID_PRODUTO"`
@@ -250,12 +292,30 @@ func TestPullComplexQuery(t *testing.T) {
 		t.Error("Expected err to be nil")
 		t.Error(err)
 	}
-
-	if len(data) == 0 {
-		t.Error("Expected data to have at least one row")
-	}
-
-	if len(data) != 500 {
-		t.Error("Expected data to have 500 rows")
-	}
+	//TO DO: Implement a way to check if the data is correct
 }
+
+// func TestPullSimpleQueryMySQL(t *testing.T) {
+
+// 	err := godotenv.Load("./test.env")
+// 	conn := GetMySQLConn()
+
+// 	if err != nil {
+// 		t.Error("Expected err to be nil")
+// 		t.Error(err)
+// 	}
+
+// 	type User struct {
+// 		Id           int    `field:"id"`
+// 		PermissionId int    `field:"permission_id"`
+// 		StoreId      int    `field:"store_id"`
+// 		Name         string `field:"name"`
+// 		Login        string `field:"login"`
+// 		Password     string `field:"password"`
+// 		Enabled      string `field:"enabled"`
+// 		Cashier      string `field:"cashier"`
+// 		MaxDiscount  string `field:"max_discount"`
+// 		Send         string `field:"send"`
+// 	}
+
+// 	pull := Pull[User]

@@ -15,6 +15,8 @@ type Pull[T interface{}] struct {
 	Args  []any
 }
 
+// type FieldName string | any 
+
 func (p *Pull[T]) GetColumns() ([]string, error) {
 
 	rows, err := p.DB.Query(p.Query, p.Args...)
@@ -92,6 +94,7 @@ func (p *Pull[T]) Run() (Data []T, Error error) {
 			}
 		
 			var val any
+
 			// handling the values types
 			if (reflectObject.FieldByName(fieldName).Kind() ==  reflect.Int64 ||
 				reflectObject.FieldByName(fieldName).Kind() ==  reflect.Int32 ||
@@ -115,9 +118,12 @@ func (p *Pull[T]) Run() (Data []T, Error error) {
 				}
 
 			} else if reflectObject.FieldByName(fieldName).Kind() ==  reflect.String {
-				// check the type of value
-				if reflect.TypeOf(dbCellValue).String() != "string" {
-					val = fmt.Sprintf("%v",dbCellValue)
+				refType := reflect.TypeOf(dbCellValue).String()
+				if refType == "float64" || refType == "float32" {
+					str :=  fmt.Sprintf("%v",dbCellValue)
+					val = str
+				} else if refType == "[]uint8" {
+					val = string(dbCellValue.([]byte))
 				} else {
 					val = dbCellValue.(string)
 				}
