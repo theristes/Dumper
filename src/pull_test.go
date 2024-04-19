@@ -3,11 +3,10 @@ package dumper
 import (
 	"testing"
 	"time"
-
 	"github.com/joho/godotenv"
 )
 
-func TestPullUsers(t *testing.T) {
+func TestPullSimpleQuery(t *testing.T) {
 
 	godotenv.Load("./test.env")
 	conn := GetConn()
@@ -55,7 +54,7 @@ func TestPullUsers(t *testing.T) {
 	}
 }
 
-func TestPullUsersSwitchKinds(t *testing.T) {
+func TestPullSimpleQueryDifferentKinds(t *testing.T) {
 
 	err := godotenv.Load("./test.env")
 	conn := GetConn()
@@ -108,7 +107,7 @@ func TestPullUsersSwitchKinds(t *testing.T) {
 	}
 }
 
-func TestPullUsersMissingFields(t *testing.T) {
+func TestPullQueryMissingFields(t *testing.T) {
 
 	err := godotenv.Load("./test.env")
 	conn := GetConn()
@@ -163,7 +162,6 @@ func TestPullUsersMissingFields(t *testing.T) {
 	if len(columns) == 8 {
 		t.Error("Expected user to have the differente number of fields as the columns")
 	}
-
 }
 
 func TestPullComplexQuery(t *testing.T) {
