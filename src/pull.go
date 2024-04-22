@@ -15,7 +15,7 @@ type Pull[T interface{}] struct {
 	Args  []any
 }
 
-// type FieldName string | any 
+// type FieldName string | any
 
 func (p *Pull[T]) GetColumns() ([]string, error) {
 
@@ -55,7 +55,6 @@ func (p *Pull[T]) Run() (Data []T, Error error) {
 		dbCellPointers[i] = &dbCellValues[i]
 	}
 
-
 	for rows.Next() {
 
 		err = rows.Scan(dbCellPointers...)
@@ -63,103 +62,27 @@ func (p *Pull[T]) Run() (Data []T, Error error) {
 			Error = err
 			return
 		}
- 
+
 		var Obj *T
 		objType := reflect.TypeOf(Obj)
 		if objType == nil {
-			// Handle error: Obj is nil
+			Error = errors.New("obj is nil")
 			return
 		}
 
 		if objType.Kind() != reflect.Ptr {
-			// Handle error: Obj is not a pointer
+			Error = errors.New("obj is not a pointer")
 			return
 		}
 
 		reflectObject := reflect.New(reflect.TypeOf(Obj).Elem()).Elem()
 
-
 		for i, dbCellValue := range dbCellValues {
 
 			columnName := dbColumns[i]
 			fieldName := getFieldNameByColumnName(reflectObject, columnName)
+			handleFields(reflectObject, fieldName, dbCellValue)
 
-			// get the fieldName by the columnName
-			if dbCellValue == nil {
-				continue
-			}
-
-			if fieldName == "" {
-				continue
-			}
-		
-			var val any
-
-			// handling the values types
-			if (reflectObject.FieldByName(fieldName).Kind() ==  reflect.Int64 ||
-				reflectObject.FieldByName(fieldName).Kind() ==  reflect.Int32 ||
-				reflectObject.FieldByName(fieldName).Kind() ==  reflect.Int16 ||
-				reflectObject.FieldByName(fieldName).Kind() ==  reflect.Int8 ||
-				reflectObject.FieldByName(fieldName).Kind() ==  reflect.Int){
-
-				str :=  fmt.Sprintf("%v",dbCellValue)
-				iVal,_ := strconv.Atoi(str)
-				switch reflectObject.FieldByName(fieldName).Kind() {
-				case reflect.Int64:
-					val = int64(iVal)
-				case reflect.Int32:
-					val = int32(iVal)
-				case reflect.Int16:
-					val = int16(iVal)
-				case reflect.Int8:
-					val = int8(iVal)
-				case reflect.Int:
-					val = iVal
-				}
-
-			} else if reflectObject.FieldByName(fieldName).Kind() ==  reflect.String {
-				refType := reflect.TypeOf(dbCellValue).String()
-				if refType == "float64" || refType == "float32" {
-					str :=  fmt.Sprintf("%v",dbCellValue)
-					val = str
-				} else if refType == "[]uint8" {
-					val = string(dbCellValue.([]byte))
-				} else {
-					val = dbCellValue.(string)
-				}
-			} else if reflectObject.FieldByName(fieldName).Kind() ==  reflect.Float32 {
-
-				if reflect.TypeOf(dbCellValue).String() != "float32" {
-					str :=  fmt.Sprintf("%v",dbCellValue)
-					fVal,_ := strconv.ParseFloat(str, 32)
-					val = float32(fVal)
-				} else {
-					val = dbCellValue.(float32)
-				}
-			} else if reflectObject.FieldByName(fieldName).Kind() ==  reflect.Float64 {
-				if reflect.TypeOf(dbCellValue).String() != "float64" {
-					str :=  fmt.Sprintf("%v",dbCellValue)
-					fVal,_ := strconv.ParseFloat(str, 64)
-					val = fVal
-				} else {
-					val = dbCellValue.(float64)
-				}
-			} else if reflectObject.FieldByName(fieldName).Kind() ==  reflect.Bool {
-				val = dbCellValue.(bool)
-			} else if reflectObject.FieldByName(fieldName).Kind() ==  reflect.Slice {
-				val = dbCellValue.([]byte)
-			} else if reflectObject.FieldByName(fieldName).Kind() ==  reflect.Struct {
-				if reflectObject.FieldByName(fieldName).Type().String() == "time.Time" {
-					val = dbCellValue.(time.Time)
-				} else {
-					continue
-				}
-			} else {
-				continue
-			}
-
-			reflectObject.FieldByName(fieldName).Set(reflect.ValueOf(val))
-		
 		}
 		Data = append(Data, reflectObject.Interface().(T))
 	}
@@ -167,6 +90,84 @@ func (p *Pull[T]) Run() (Data []T, Error error) {
 	return Data, nil
 }
 
+func handleFields(reflectObject reflect.Value, fieldName string, dbCellValue any) {
+
+	if dbCellValue == nil {
+		return
+	}
+
+	if fieldName == "" {
+		return
+	}
+
+	switch reflectObject.FieldByName(fieldName).Kind() {
+
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			str := fmt.Sprintf("%v", dbCellValue)
+			iVal, _ := strconv.Atoi(str)
+			switch reflectObject.FieldByName(fieldName).Kind() {
+			case reflect.Int64:
+				reflectObject.FieldByName(fieldName).SetInt(int64(iVal))
+			case reflect.Int32:
+				reflectObject.FieldByName(fieldName).SetInt(int64(int32(iVal)))
+			case reflect.Int16:
+				reflectObject.FieldByName(fieldName).SetInt(int64(int16(iVal)))
+			case reflect.Int8:
+				reflectObject.FieldByName(fieldName).SetInt(int64(int8(iVal)))
+			case reflect.Int:
+				reflectObject.FieldByName(fieldName).SetInt(int64(iVal))
+			}
+
+		case reflect.String:
+			refType := reflect.TypeOf(dbCellValue).String()
+			if refType == "float64" || refType == "float32" {
+				str := fmt.Sprintf("%v", dbCellValue)
+				reflectObject.FieldByName(fieldName).SetString(str) 
+			} else if refType == "int" || refType == "int8" || refType == "int16" || refType == "int32" || refType == "int64" {
+				str := fmt.Sprintf("%v", dbCellValue)
+				reflectObject.FieldByName(fieldName).SetString(str)
+			} else if refType == "[]uint8" {
+				reflectObject.FieldByName(fieldName).SetString(string(dbCellValue.([]byte)))
+			} else {
+				reflectObject.FieldByName(fieldName).SetString(dbCellValue.(string))
+			}
+
+		case reflect.Float32:
+			if reflect.TypeOf(dbCellValue).String() != "float32" {
+				str := fmt.Sprintf("%v", dbCellValue)
+				fVal, _ := strconv.ParseFloat(str, 32)
+				reflectObject.FieldByName(fieldName).SetFloat(float64(float32(fVal)))
+			} else {
+				reflectObject.FieldByName(fieldName).SetFloat(float64(dbCellValue.(float32)))
+			}
+
+		case reflect.Float64:
+			if reflect.TypeOf(dbCellValue).String() != "float64" {
+				str := fmt.Sprintf("%v", dbCellValue)
+				fVal, _ := strconv.ParseFloat(str, 64)
+				reflectObject.FieldByName(fieldName).SetFloat(fVal)
+			} else {
+				reflectObject.FieldByName(fieldName).SetFloat(dbCellValue.(float64))
+			}
+
+		case reflect.Bool:
+			reflectObject.FieldByName(fieldName).SetBool(dbCellValue.(bool))
+
+		case reflect.Slice:
+			reflectObject.FieldByName(fieldName).SetBytes(dbCellValue.([]byte))
+			
+		case reflect.Struct:
+			if reflectObject.FieldByName(fieldName).Type().String() == "time.Time" {
+				if reflect.TypeOf(dbCellValue).String() == "[]uint8" {
+					timeStr := string(dbCellValue.([]uint8))
+					parsedTime, _ := time.Parse("2006-01-02 15:04:05", timeStr)
+					reflectObject.FieldByName(fieldName).Set(reflect.ValueOf(parsedTime))
+					return
+				}
+				reflectObject.FieldByName(fieldName).Set(reflect.ValueOf(dbCellValue.(time.Time)))
+			}
+		}
+}
 
 func getFieldNameByColumnName(reflectObject reflect.Value, columnName string) string {
 	for i := 0; i < reflectObject.NumField(); i++ {

@@ -7,16 +7,18 @@ import (
 	"os"
 
 	_ "github.com/nakagami/firebirdsql"
+	_ "github.com/go-sql-driver/mysql" 
+	
 )
 
 func GetFirebirdConn() *sql.DB {
 
-	dbUser := os.Getenv("FIREBIRD_USER")
-	dbPass := os.Getenv("FIREBIRD_PASSWORD")
-	dbHost := os.Getenv("FIREBIRD_HOST")
-	dbPath := os.Getenv("FIREBIRD_PATH")
+	firebirdUser := os.Getenv("FIREBIRD_USER")
+	firebirdPassword := os.Getenv("FIREBIRD_PASSWORD")
+	firebirdHost := os.Getenv("FIREBIRD_HOST")
+	firebirdPath := os.Getenv("FIREBIRD_PATH")
 
-	strconn := fmt.Sprintf("%s:%s@%s/%s", dbUser, dbPass, dbHost, dbPath)
+	strconn := fmt.Sprintf("%s:%s@%s/%s", firebirdUser, firebirdPassword, firebirdHost, firebirdPath)
 	conn, err := sql.Open("firebirdsql", strconn)
 
 	if err != nil {
@@ -27,12 +29,12 @@ func GetFirebirdConn() *sql.DB {
 
 func GetMySQLConn() *sql.DB {
 
-	dbUser := os.Getenv("MYSQL_USER")
-	dbPass := os.Getenv("MYSQL_PASSWORD")
-	dbHost := os.Getenv("MYSQL_HOST")
-	dbPath := os.Getenv("MYSQL_PATH")
+	mysqlUser := os.Getenv("MYSQL_USER")
+	mysqlPassword := os.Getenv("MYSQL_PASSWORD")
+	mysqlHost := os.Getenv("MYSQL_HOST")
+	mysqlDatabase := os.Getenv("MYSQL_DATABASE")
 
-	strconn := fmt.Sprintf("%s:%s@tcp(%s)/%s", dbUser, dbPass, dbHost, dbPath)
+	strconn := fmt.Sprintf("%s:%s@tcp(%s)/%s", mysqlUser, mysqlPassword, mysqlHost, mysqlDatabase)
 	conn, err := sql.Open("mysql", strconn)
 
 	if err != nil {

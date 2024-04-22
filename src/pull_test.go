@@ -1,9 +1,9 @@
 package dumper
 
 import (
+	"reflect"
 	"testing"
 	"time"
-
 	"github.com/joho/godotenv"
 )
 
@@ -50,9 +50,6 @@ func TestPullSimpleQueryFirebird(t *testing.T) {
 		t.Error("Expected data to have at least one row")
 	}
 
-	if len(data) == 62 {
-		t.Error("Expected data to have 62 rows")
-	}
 }
 func TestPullSimpleQueryFirebirdWithArgs(t *testing.T) {
 
@@ -98,6 +95,7 @@ func TestPullSimpleQueryFirebirdWithArgs(t *testing.T) {
 		t.Error("Expected data to have at least one row")
 	}
 }
+
 func TestPullSimpleQueryFirebirdDifferentKinds(t *testing.T) {
 
 	err := godotenv.Load("./test.env")
@@ -150,6 +148,7 @@ func TestPullSimpleQueryFirebirdDifferentKinds(t *testing.T) {
 		t.Error("Expected data to have 62 rows")
 	}
 }
+
 func TestPullQueryFirebirdMissingFields(t *testing.T) {
 
 	err := godotenv.Load("./test.env")
@@ -206,6 +205,7 @@ func TestPullQueryFirebirdMissingFields(t *testing.T) {
 		t.Error("Expected user to have the differente number of fields as the columns")
 	}
 }
+
 func TestPullComplexQueryFirebird(t *testing.T) {
 
 	godotenv.Load("./test.env")
@@ -292,30 +292,236 @@ func TestPullComplexQueryFirebird(t *testing.T) {
 		t.Error("Expected err to be nil")
 		t.Error(err)
 	}
-	//TO DO: Implement a way to check if the data is correct
 }
 
-// func TestPullSimpleQueryMySQL(t *testing.T) {
+func TestPullSimpleQueryMySQL(t *testing.T) {
 
-// 	err := godotenv.Load("./test.env")
-// 	conn := GetMySQLConn()
+	err := godotenv.Load("./test.env")
+	conn := GetMySQLConn()
 
-// 	if err != nil {
-// 		t.Error("Expected err to be nil")
-// 		t.Error(err)
-// 	}
+	if err != nil {
+		t.Error("Expected err to be nil")
+		t.Error(err)
+	}
 
-// 	type User struct {
-// 		Id           int    `field:"id"`
-// 		PermissionId int    `field:"permission_id"`
-// 		StoreId      int    `field:"store_id"`
-// 		Name         string `field:"name"`
-// 		Login        string `field:"login"`
-// 		Password     string `field:"password"`
-// 		Enabled      string `field:"enabled"`
-// 		Cashier      string `field:"cashier"`
-// 		MaxDiscount  string `field:"max_discount"`
-// 		Send         string `field:"send"`
-// 	}
+	type Company struct {
+		Id          int       `field:"id"`
+		CompanyId   int       `field:"id_company"`
+		OrderId     string    `field:"order_id"`
+		SerieNfce   int       `field:"serie_nfce"`
+		NumeroNfce  int       `field:"numero_nfce"`
+		ChaveNfce   string    `field:"chave_nfce"`
+		TipoEmissao string    `field:"tipo_emissao"`
+		Protocolo   string    `field:"protocolo"`
+		Data        time.Time `field:"data"`
+		Hora        time.Time `field:"hora"`
+		Status      string    `field:"status"`
+	}
 
-// 	pull := Pull[User]
+	pull := Pull[Company]{
+		DB:    conn,
+		Query: "SELECT * FROM nfce",
+	}
+
+	data, err := pull.Run()
+
+	if err != nil {
+		t.Error("Expected err to be nil")
+		t.Error(err)
+	}
+
+	if data == nil {
+		t.Error("Expected data to be not nil")
+	}
+
+	if err != nil {
+		t.Error("Expected err to be nil")
+		t.Error(err)
+	}
+
+	if len(data) == 0 {
+		t.Error("Expected data to have at least one row")
+	}
+}
+
+func TestPullSimpleQueryDifferentKindsMySQL(t *testing.T) {
+
+	err := godotenv.Load("./test.env")
+	conn := GetMySQLConn()
+
+	if err != nil {
+		t.Error("Expected err to be nil")
+		t.Error(err)
+	}
+
+	type Company struct {
+		Id          int    `field:"id"`
+		CompanyId   int    `field:"id_company"`
+		OrderId     int    `field:"order_id"`
+		SerieNfce   string `field:"serie_nfce"`
+		NumeroNfce  string `field:"numero_nfce"`
+		// ChaveNfce   string `field:"chave_nfce"`
+		// TipoEmissao string `field:"tipo_emissao"`
+		// Protocolo   string `field:"protocolo"`
+		// Data        string `field:"data"`
+		// Hora        string `field:"hora"`
+		// Status      string `field:"status"`
+	}
+
+	pull := Pull[Company]{
+		DB:    conn,
+		Query: "SELECT * FROM nfce",
+	}
+
+	data, err := pull.Run()
+
+	if err != nil {
+		t.Error("Expected err to be nil")
+		t.Error(err)
+	}
+
+	if data == nil {
+		t.Error("Expected data to be not nil")
+	}
+
+	if err != nil {
+		t.Error("Expected err to be nil")
+		t.Error(err)
+	}
+
+	if len(data) == 0 {
+		t.Error("Expected data to have at least one row")
+	}
+}
+
+func TestHandleFields(t *testing.T) {
+	type TestStruct struct {
+		IntField    int
+		StringField string
+		Float32Field float32
+		Float64Field float64
+		BoolField   bool
+		SliceField  []byte
+		StructField time.Time
+	}
+
+	testCases := []struct {
+		Name         string
+		ReflectValue reflect.Value
+		FieldName    string
+		DBCellValue  interface{}
+		Expected     TestStruct
+	}{
+		{
+			Name:         "Handle int field",
+			ReflectValue: reflect.ValueOf(&TestStruct{}).Elem(),
+			FieldName:    "IntField",
+			DBCellValue:  42,
+			Expected: TestStruct{
+				IntField: 42,
+			},
+		},
+		{
+			Name:         "Handle string field",
+			ReflectValue: reflect.ValueOf(&TestStruct{}).Elem(),
+			FieldName:    "StringField",
+			DBCellValue:  "hello",
+			Expected: TestStruct{
+				StringField: "hello",
+			},
+		},
+		{
+			Name:         "Handle float32 field",
+			ReflectValue: reflect.ValueOf(&TestStruct{}).Elem(),
+			FieldName:    "Float32Field",
+			DBCellValue:  3.14,
+			Expected: TestStruct{
+				Float32Field: 3.14,
+			},
+		},
+		{
+			Name:         "Handle float64 field",
+			ReflectValue: reflect.ValueOf(&TestStruct{}).Elem(),
+			FieldName:    "Float64Field",
+			DBCellValue:  3.14159,
+			Expected: TestStruct{
+				Float64Field: 3.14159,
+			},
+		},
+		{
+			Name:         "Handle bool field",
+			ReflectValue: reflect.ValueOf(&TestStruct{}).Elem(),
+			FieldName:    "BoolField",
+			DBCellValue:  true,
+			Expected: TestStruct{
+				BoolField: true,
+			},
+		},
+		{
+			Name:         "Handle slice field",
+			ReflectValue: reflect.ValueOf(&TestStruct{}).Elem(),
+			FieldName:    "SliceField",
+			DBCellValue:  []byte{1, 2, 3},
+			Expected: TestStruct{
+				SliceField: []byte{1, 2, 3},
+			},
+		},
+		{
+			Name:         "Handle struct field",
+			ReflectValue: reflect.ValueOf(&TestStruct{}).Elem(),
+			FieldName:    "StructField",
+			DBCellValue:  time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Expected: TestStruct{
+				StructField: time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			handleFields(tc.ReflectValue, tc.FieldName, tc.DBCellValue)
+
+			actual := tc.ReflectValue.Interface().(TestStruct)
+			if !reflect.DeepEqual(actual, tc.Expected) {
+				t.Errorf("Expected %+v, but got %+v", tc.Expected, actual)
+			}
+		})
+	}
+}
+
+func TestGetFieldNameByColumnName(t *testing.T) {
+	type TestStruct struct {
+		IntField    int    `field:"column1"`
+		StringField string `field:"column2"`
+		FloatField  float64
+	}
+
+	testCases := []struct {
+		Name         string
+		ReflectValue reflect.Value
+		ColumnName   string
+		Expected     string
+	}{
+		{
+			Name:         "Matching column name",
+			ReflectValue: reflect.ValueOf(TestStruct{}),
+			ColumnName:   "column1",
+			Expected:     "IntField",
+		},
+		{
+			Name:         "Non-matching column name",
+			ReflectValue: reflect.ValueOf(TestStruct{}),
+			ColumnName:   "column3",
+			Expected:     "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			actual := getFieldNameByColumnName(tc.ReflectValue, tc.ColumnName)
+			if actual != tc.Expected {
+				t.Errorf("Expected field name %s, but got %s", tc.Expected, actual)
+			}
+		})
+	}
+}
